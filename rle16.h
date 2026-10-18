@@ -14,6 +14,7 @@
 #define RLE16_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 /**
  * @defgroup rle16_config ライブラリ設定
@@ -48,18 +49,17 @@ extern "C" {
 #endif
 
 /**
- * @brief RLEエンコード（ブロック一括圧縮）
+ * @brief RLEエンコード（ストリーム一括圧縮）
  * @details 
  * 入力バッファ内の連続する同一データをスキャンし、[連続回数] と [データ値] を 
  * 1つの16ビットパケットに詰め込んで圧縮バッファへ書き出します。
- * データが一切連続しない最悪のケースでも、圧縮パケット数は入力データ数（等倍）に収まり、
- * 元の容量より肥大化することが絶対にありません。
+ * 戻り値と入力カウントを 32-bit 化したことで、65,535要素を超える巨大ストリームも一括圧縮可能です。
  * 
  * @param[in]  src_buf   入力データ（すでに下位ビットが切り捨て済みの生データ配列）へのポインタ
- * @param[in]  src_count 入力データの要素数（最大 65535 個）
+ * @param[in]  src_count 入力データの要素数
  * @param[out] dest_buf  圧縮された 16-bit パケットを書き込む出力バッファへのポインタ
  * 
- * @return uint16_t 生成された圧縮パケットの総数（出力バッファに書き込まれた要素数）
+ * @return uint32_t 生成された圧縮パケットの総数（出力バッファに書き込まれた要素数）
  * 
  * @note 
  * - @b 時間計算量: O(N) - 入力データ数に比例した一本道のループ（条件分岐が極めてシンプル）
@@ -67,19 +67,19 @@ extern "C" {
  * - @b 警告: `src_buf` 内の各データは、あらかじめ `RLE16_DATA_MASK`（例: 12ビットなら 0〜4095）の
  *            範囲内に収まっている必要があります。範囲外のビットは圧縮時にカウンタ領域を破壊します。
  */
-uint16_t rle16_encode(const uint16_t *src_buf, uint16_t src_count, uint16_t *dest_buf);
+uint32_t rle16_encode(const uint16_t *src_buf, uint32_t src_count, uint16_t *dest_buf);
 
 /**
- * @brief RLEデコード（ブロック一括復元）
+ * @brief RLEデコード（ストリーム一括復元）
  * @details 
  * 圧縮された16ビットパケットの配列を読み込み、ビットパッキングを解除して
  * 元の連続するデータストリームを出力バッファへ展開（復元）します。
  * 
  * @param[in]  src_buf   圧縮された 16-bit パケット配列へのポインタ
- * @param[in]  src_count 圧縮パケットの個数（`rle16_encode` の戻り値）
+ * @param[in]  src_count 圧縮パケットの個数（`rle16_encode` の戻り値、または展開したいパケット数）
  * @param[out] dest_buf  復元されたデータを書き込む出力バッファへのポインタ
  * 
- * @return uint16_t 復元（展開）された元のデータの総数
+ * @return uint32_t 復元（展開）された元のデータの総数
  * 
  * @note 
  * - @b 時間計算量: O(N) - 復元される総データ数に依存
@@ -87,7 +87,7 @@ uint16_t rle16_encode(const uint16_t *src_buf, uint16_t src_count, uint16_t *des
  * - @b 注意: 出力バッファ（`dest_buf`）は、復元後の総データ数を格納するのに十分な容量を
  *            あらかじめ確保しておく必要があります（最大で圧縮前の元サイズと同等）。
  */
-uint16_t rle16_decode(const uint16_t *src_buf, uint16_t src_count, uint16_t *dest_buf);
+uint32_t rle16_decode(const uint16_t *src_buf, uint32_t src_count, uint16_t *dest_buf);
 
 #ifdef __cplusplus
 }
